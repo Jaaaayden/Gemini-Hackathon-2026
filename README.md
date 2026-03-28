@@ -18,6 +18,6 @@ active players and there's very few free resources online to improve
 used models to identify characters on loading screen with high accuracy using images from the wiki (there's some issues with identifying brawlers with skins that 
 significantly change the model but minor)
 
-working on using bytetrack to track the moving players/enemies + super/hypercharge status + game mode off loading screen
+connects directly to your phone to broadcast the game & detect loading screen from live gameplay
 
-planning on using gemini live to pass critical moments of the game with context to communicate strategies/proper laning/when to engage/disengage
+uses gemini's live api to give real time insights into how to play into those speciifc brawlers + the mode
