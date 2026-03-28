@@ -57,6 +57,8 @@
             ws.send(base64Image);
         }
 
+        let nextPlayTime = 0;
+
         function playAudioChunk(arrayBuffer) {
             const int16Array = new Int16Array(arrayBuffer);
             const float32Array = new Float32Array(int16Array.length);
@@ -68,7 +70,11 @@
             const source = audioCtx.createBufferSource();
             source.buffer = buffer;
             source.connect(audioCtx.destination);
-            source.start();
+
+            const now = audioCtx.currentTime;
+            const startTime = Math.max(now, nextPlayTime);
+            source.start(startTime);
+            nextPlayTime = startTime + buffer.duration;
         }
 
         // Use browser Text-to-Speech for coaching callouts

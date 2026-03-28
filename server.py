@@ -62,13 +62,20 @@ def build_system_instruction(roster: dict, mode: str) -> str:
                 lines.append(f"  - {player_name} playing {brawler}")
         return "\n".join(lines)
 
+    my_names = ", ".join(p.get("brawler", "?") for p in my_team)
+    enemy_names = ", ".join(p.get("brawler", "?") for p in enemy_team)
+
     return (
-        f"You are a real-time Brawl Stars AI coach. The user is the GREEN health bar.\n\n"
+        f"You are a real-time Brawl Stars AI coach. The user is on the BLUE/GREEN team.\n\n"
         f"{mode_section}\n\n"
-        f"MY TEAM:\n{brawler_lines(my_team)}\n\n"
-        f"ENEMY TEAM:\n{brawler_lines(enemy_team)}\n\n"
+        f"MY TEAM (allies — do NOT coach against these):\n{brawler_lines(my_team)}\n\n"
+        f"ENEMY TEAM (RED — coach against these):\n{brawler_lines(enemy_team)}\n\n"
+        f"IMPORTANT: The only brawlers in this match are: {my_names} (allies) and {enemy_names} (enemies). "
+        f"Do NOT guess or invent brawler names. When you see a character on screen, match it to one of these names only. "
+        f"If you cannot tell which brawler it is, say 'an enemy' instead of guessing.\n\n"
+        f"Focus ALL coaching on how to play AGAINST the enemy team. Never tell the user to watch out for their own teammates. "
         f"Give short, punchy voice callouts based on what you see in the live frames. "
-        f"Reference the enemy tips above when relevant. Prioritize the mode's win condition."
+        f"Prioritize the mode's win condition."
     )
 
 
@@ -106,72 +113,65 @@ async def live_coach_session(browser_ws: WebSocket, roster, mode):
                 latest_img_bytes = base64.b64decode(data.split(",")[1])
                 frame_recv += 1
 
-        # Generate a short audio nudge: 0.3s of low white noise at 16kHz 16-bit PCM
-        # Just enough to trigger VAD start, then silence triggers VAD end → model responds
-        nudge_samples = np.random.randint(-30, 31, size=4800, dtype=np.int16)  # 0.3s
-        silence_samples = np.zeros(4800, dtype=np.int16)  # 0.3s silence after
-        nudge_b64 = base64.b64encode(nudge_samples.tobytes()).decode("utf-8")
-        silence_b64 = base64.b64encode(silence_samples.tobytes()).decode("utf-8")
+        turn_complete = asyncio.Event()
+        turn_complete.set()  # ready for first prompt
 
-        # Send video frame + audio nudge to trigger VAD response
+        # Send video frame + text prompt, wait for model to finish before next
         async def send_frames():
             nonlocal frame_sent
             while True:
-                await asyncio.sleep(3.0)
+                await asyncio.sleep(10.0)
                 if latest_img_bytes is None:
                     continue
+
+                # Wait for previous response to finish
+                await turn_complete.wait()
+                turn_complete.clear()
+
                 frame_sent += 1
                 img_b64 = base64.b64encode(latest_img_bytes).decode("utf-8")
 
-                # 1. Send video frame
+                # Send video frame
                 await gemini_ws.send(json.dumps({
                     "realtimeInput": {
                         "video": {"data": img_b64, "mimeType": "image/jpeg"}
                     }
                 }))
 
-                # 2. Send brief noise to trigger VAD "activity start"
+                # Send text to prompt model response
                 await gemini_ws.send(json.dumps({
                     "realtimeInput": {
-                        "audio": {"data": nudge_b64, "mimeType": "audio/pcm;rate=16000"}
+                        "text": "What's happening right now? Give a short coaching callout."
                     }
                 }))
 
-                # 3. Send silence so VAD detects "activity end" → triggers response
-                await asyncio.sleep(0.3)
-                await gemini_ws.send(json.dumps({
-                    "realtimeInput": {
-                        "audio": {"data": silence_b64, "mimeType": "audio/pcm;rate=16000"}
-                    }
-                }))
+                print(f"[live_coach] Sent frame {frame_sent} + text prompt")
 
-                print(f"[live_coach] Sent frame {frame_sent} + audio nudge")
-
-        # Receive audio from Gemini and forward to browser
+        # Receive responses from Gemini and forward audio to browser
+        # Gemini sends all responses as JSON (per official docs) — parse everything as JSON
         async def receive_audio():
             while True:
                 raw = await gemini_ws.recv()
+                # Gemini may send JSON as either text or binary frames
                 if isinstance(raw, bytes):
-                    # Binary audio chunk — forward directly
-                    print(f"[live_coach] Audio binary ({len(raw)} bytes) → browser")
-                    await browser_ws.send_bytes(raw)
-                else:
-                    resp = json.loads(raw)
-                    sc = resp.get("serverContent", {})
-                    mt = sc.get("modelTurn", {})
-                    parts = mt.get("parts", [])
-                    for part in parts:
-                        inline = part.get("inlineData", {})
-                        if inline.get("data"):
-                            audio_bytes = base64.b64decode(inline["data"])
-                            print(f"[live_coach] Audio chunk ({len(audio_bytes)} bytes) → browser")
-                            await browser_ws.send_bytes(audio_bytes)
-                        if part.get("text"):
-                            text = part["text"]
-                            print(f"[live_coach] Coach says: {text}")
-                            await browser_ws.send_text(json.dumps({"type": "coach", "text": text}))
-                    if sc.get("turnComplete"):
-                        print("[live_coach] Turn complete")
+                    raw = raw.decode("utf-8")
+                resp = json.loads(raw)
+                sc = resp.get("serverContent", {})
+                mt = sc.get("modelTurn", {})
+                parts = mt.get("parts", [])
+                for part in parts:
+                    inline = part.get("inlineData", {})
+                    if inline.get("data"):
+                        audio_bytes = base64.b64decode(inline["data"])
+                        print(f"[live_coach] Audio chunk ({len(audio_bytes)} bytes) → browser")
+                        await browser_ws.send_bytes(audio_bytes)
+                    if part.get("text"):
+                        text = part["text"]
+                        print(f"[live_coach] Coach says: {text}")
+                        await browser_ws.send_text(json.dumps({"type": "coach", "text": text}))
+                if sc.get("turnComplete"):
+                    print("[live_coach] Turn complete")
+                    turn_complete.set()
 
         await asyncio.gather(buffer_frames(), send_frames(), receive_audio())
 
