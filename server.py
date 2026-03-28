@@ -193,12 +193,33 @@ async def websocket_endpoint(websocket: WebSocket):
     REQUIRED_CONSECUTIVE = 3
     loading_frame = None
 
+    frame_count = 0
     try:
         while True:
             data = await websocket.receive_text()
             img_bytes = base64.b64decode(data.split(",")[1])
             np_arr = np.frombuffer(img_bytes, np.uint8)
             frame_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            frame_count += 1
+
+            if frame_bgr is None:
+                print(f"[DEBUG] Frame {frame_count}: cv2.imdecode returned None (bad image data)")
+                continue
+
+            if frame_count % 10 == 1:
+                h = frame_bgr.shape[0]
+                hsv = cv2.cvtColor(frame_bgr[35:, :], cv2.COLOR_BGR2HSV)
+                h2 = hsv.shape[0]
+                top = hsv[: h2 // 3, :]
+                bottom = hsv[2 * h2 // 3 :, :]
+                orange_mask = cv2.bitwise_or(
+                    cv2.inRange(top, np.array([0, 120, 80]), np.array([25, 255, 255])),
+                    cv2.inRange(top, np.array([155, 120, 80]), np.array([180, 255, 255])),
+                )
+                blue_mask = cv2.inRange(bottom, np.array([95, 100, 70]), np.array([135, 255, 255]))
+                top_r = np.count_nonzero(orange_mask) / orange_mask.size
+                bot_r = np.count_nonzero(blue_mask) / blue_mask.size
+                print(f"[DEBUG] Frame {frame_count}: shape={frame_bgr.shape} orange={top_r:.3f} blue={bot_r:.3f} (need >=0.10 each)")
 
             if is_loading_screen(frame_bgr):
                 consecutive_loading += 1
