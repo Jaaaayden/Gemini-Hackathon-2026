@@ -1,0 +1,8 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+temp_roster.jpg
+test_loading/
+test_mode/
+.env

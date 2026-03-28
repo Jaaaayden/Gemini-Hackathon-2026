@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import tempfile
 import traceback
 import cv2
 import numpy as np
@@ -17,6 +18,7 @@ from classify_loading_screen import is_loading_screen, classify_loading_screen, 
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/brawler_models", StaticFiles(directory="brawler_models"), name="brawler_models")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 LIVE_MODEL = "gemini-3.1-flash-live-preview"
@@ -203,9 +205,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 loading_frame = frame_bgr
                 if consecutive_loading >= REQUIRED_CONSECUTIVE:
                     print("Loading Screen confirmed! Classifying roster and mode...")
-                    cv2.imwrite("temp_roster.jpg", loading_frame)
+                    tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+                    tmp_path = tmp.name
+                    tmp.close()
+                    cv2.imwrite(tmp_path, loading_frame)
                     loop = asyncio.get_event_loop()
-                    result = await loop.run_in_executor(None, classify_loading_screen, "temp_roster.jpg", BRAWLER_REFS)
+                    result = await loop.run_in_executor(None, classify_loading_screen, tmp_path, BRAWLER_REFS)
+                    os.unlink(tmp_path)
                     mode = result.get("game_mode", "UNKNOWN").upper().strip()
                     print(f"Starting Match! Mode: {mode}, Roster: {result}")
                     await websocket.send_text(json.dumps({
@@ -229,4 +235,5 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

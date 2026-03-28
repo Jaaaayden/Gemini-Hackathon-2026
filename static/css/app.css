@@ -134,6 +134,18 @@ video {
     margin-bottom: 6px;
     font-size: 13px;
     transition: background 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brawler-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .brawler-card:hover {

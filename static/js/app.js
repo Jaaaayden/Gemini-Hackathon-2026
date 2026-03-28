@@ -30,7 +30,8 @@ function connectAndListen() {
     statusEl.textContent = 'Scanning for loading screen...';
     audioCtx.resume();
 
-    ws = new WebSocket("ws://localhost:8000/ws");
+    const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(`${wsProto}//${location.host}/ws`);
     ws.binaryType = "arraybuffer";
 
     ws.onopen = () => {
@@ -69,14 +70,16 @@ function showMatchInfo(info) {
     // My team
     html += '<div class="team-section ally"><h3>My Team</h3>';
     for (const p of info.my_team) {
-        html += `<div class="brawler-card"><span class="brawler-name">${p.brawler}</span> <span class="brawler-role">${p.player_name || ''}</span></div>`;
+        const imgSrc = `/brawler_models/${encodeURIComponent(p.brawler)}.png`;
+        html += `<div class="brawler-card"><img class="brawler-img" src="${imgSrc}" alt="${p.brawler}"><div class="brawler-info"><span class="brawler-name">${p.brawler}</span> <span class="brawler-role">${p.player_name || ''}</span></div></div>`;
     }
     html += '</div>';
 
     // Enemy team
     html += '<div class="team-section enemy"><h3>Enemy Team</h3>';
     for (const p of info.enemy_team) {
-        html += `<div class="brawler-card"><span class="brawler-name">${p.brawler}</span> <span class="brawler-role">${p.player_name || ''}</span></div>`;
+        const imgSrc = `/brawler_models/${encodeURIComponent(p.brawler)}.png`;
+        html += `<div class="brawler-card"><img class="brawler-img" src="${imgSrc}" alt="${p.brawler}"><div class="brawler-info"><span class="brawler-name">${p.brawler}</span> <span class="brawler-role">${p.player_name || ''}</span></div></div>`;
     }
     html += '</div>';
 
@@ -97,6 +100,9 @@ function sendFrameToBackend() {
 let nextPlayTime = 0;
 
 function playAudioChunk(arrayBuffer) {
+    // Re-resume in case browser suspended the context (tab lost focus)
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
     const int16Array = new Int16Array(arrayBuffer);
     const float32Array = new Float32Array(int16Array.length);
     for (let i = 0; i < int16Array.length; i++) {
@@ -109,6 +115,8 @@ function playAudioChunk(arrayBuffer) {
     source.connect(audioCtx.destination);
 
     const now = audioCtx.currentTime;
+    // Reset scheduling if we've fallen behind (gap in audio delivery)
+    if (nextPlayTime < now - 0.5) nextPlayTime = now;
     const startTime = Math.max(now, nextPlayTime);
     source.start(startTime);
     nextPlayTime = startTime + buffer.duration;
