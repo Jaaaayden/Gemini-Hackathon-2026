@@ -106,7 +106,14 @@ async def live_coach_session(browser_ws: WebSocket, roster, mode):
                 latest_img_bytes = base64.b64decode(data.split(",")[1])
                 frame_recv += 1
 
-        # Send video frames to Gemini at ~1 FPS, then trigger a response
+        # Generate a short audio nudge: 0.3s of low white noise at 16kHz 16-bit PCM
+        # Just enough to trigger VAD start, then silence triggers VAD end → model responds
+        nudge_samples = np.random.randint(-30, 31, size=4800, dtype=np.int16)  # 0.3s
+        silence_samples = np.zeros(4800, dtype=np.int16)  # 0.3s silence after
+        nudge_b64 = base64.b64encode(nudge_samples.tobytes()).decode("utf-8")
+        silence_b64 = base64.b64encode(silence_samples.tobytes()).decode("utf-8")
+
+        # Send video frame + audio nudge to trigger VAD response
         async def send_frames():
             nonlocal frame_sent
             while True:
@@ -114,26 +121,31 @@ async def live_coach_session(browser_ws: WebSocket, roster, mode):
                 if latest_img_bytes is None:
                     continue
                 frame_sent += 1
-                encoded = base64.b64encode(latest_img_bytes).decode("utf-8")
+                img_b64 = base64.b64encode(latest_img_bytes).decode("utf-8")
 
                 # 1. Send video frame
                 await gemini_ws.send(json.dumps({
                     "realtimeInput": {
-                        "video": {
-                            "data": encoded,
-                            "mimeType": "image/jpeg",
-                        }
+                        "video": {"data": img_b64, "mimeType": "image/jpeg"}
                     }
                 }))
 
-                # 2. Send text turn to trigger a response
+                # 2. Send brief noise to trigger VAD "activity start"
                 await gemini_ws.send(json.dumps({
-                    "clientContent": {
-                        "turns": [{"role": "user", "parts": [{"text": "What should I do?"}]}],
-                        "turnComplete": True,
+                    "realtimeInput": {
+                        "audio": {"data": nudge_b64, "mimeType": "audio/pcm;rate=16000"}
                     }
                 }))
-                print(f"[live_coach] Sent frame {frame_sent} + trigger")
+
+                # 3. Send silence so VAD detects "activity end" → triggers response
+                await asyncio.sleep(0.3)
+                await gemini_ws.send(json.dumps({
+                    "realtimeInput": {
+                        "audio": {"data": silence_b64, "mimeType": "audio/pcm;rate=16000"}
+                    }
+                }))
+
+                print(f"[live_coach] Sent frame {frame_sent} + audio nudge")
 
         # Receive audio from Gemini and forward to browser
         async def receive_audio():
