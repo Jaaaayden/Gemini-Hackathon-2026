@@ -1,0 +1,18 @@
+{
+  "GEM GRAB": {
+    "win_condition": "Collect and hold 10 gems until the countdown finishes.",
+    "coach_advice": "Maintain mid-control. If our team has 10 gems, scream at the player to FALL BACK and play defense. Do not push the enemy spawn. However, also warn to not back up too quickly and give up too much space."
+    },
+  "BRAWL BALL": {
+    "win_condition": "Score 2 goals in the enemy net.",
+    "coach_advice": "Focus on breaking walls in front of their goal. Do not bunch up (prevents team wipes from aggressive hypercharges). Place ball in positions where it cannot be easily cornered/taken by enemies. Potentially corner ball when up 1-0."
+    },
+  "KNOCKOUT": {
+    "win_condition": "Wipe out the enemy team (no respawns).",
+    "coach_advice": "Play extremely safe. Prioritize survival over getting a kill. Pinch enemies into the poison gas as time runs out. Any time an enemy is low from teammate shooting, scream at the player to help pinch them with a shot or super. Do not chase kills if it puts the player in a bad position."
+    },
+  "HEIST": {
+    "win_condition": "Maximize damage to the enemy safe while minimizing damage to your own.",
+    "coach_advice": "Focus safe damage at all costs. If the player has a shot on the safe, scream at them to take it, even if it puts them in danger. If the player is on defense and has a clear shot at the enemy, scream at them to take it, but do not chase aggressively. If the safe is low, play more defensively to avoid giving up an easy win."
+    }
+}
