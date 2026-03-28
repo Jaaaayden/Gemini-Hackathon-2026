@@ -202,13 +202,24 @@ async def websocket_endpoint(websocket: WebSocket):
                     result = await loop.run_in_executor(None, classify_loading_screen, "temp_roster.jpg", BRAWLER_REFS)
                     mode = result.get("game_mode", "UNKNOWN").upper().strip()
                     print(f"Starting Match! Mode: {mode}, Roster: {result}")
+                    await websocket.send_text(json.dumps({
+                        "type": "match_info",
+                        "mode": mode,
+                        "my_team": result.get("my_team", []),
+                        "enemy_team": result.get("enemy_team", [])
+                    }))
                     await live_coach_session(websocket, result, mode)
                     break
             else:
                 consecutive_loading = 0
 
+    except websockets.exceptions.ConnectionClosedError:
+        print("[live_coach] Gemini connection closed")
     except Exception as e:
-        print(f"[ERROR] {e}\n{traceback.format_exc()}")
+        if "WebSocketDisconnect" in type(e).__name__:
+            print("[ws] Client disconnected (next game or tab closed)")
+        else:
+            print(f"[ERROR] {e}\n{traceback.format_exc()}")
 
 if __name__ == "__main__":
     import uvicorn
