@@ -41,6 +41,13 @@ Important notes:
   Use them to visually match each portrait card to the correct brawler.
 - The brawler name in your response MUST exactly match one of the reference image labels provided.
 
+Also identify the game mode from the map visible behind the portrait cards.
+Known game modes: GEM GRAB, BRAWL BALL, KNOCKOUT, HEIST.
+- GEM GRAB: gem mine in center, purple/pink crystals, dark cave theme
+- BRAWL BALL: soccer/football field with goal nets on each side, green grass
+- KNOCKOUT: arena map, often has poison gas closing in from edges
+- HEIST: has a safe/vault object on each side of the map, often desert themed
+
 Handling skins:
 - Skins can COMPLETELY change a brawler's appearance — including colour palette, outfit, and even
   species or body type (e.g. a human brawler may have a skin that turns them into an animal or
@@ -53,9 +60,10 @@ Handling skins:
 - The reference images show each brawler's DEFAULT appearance. A portrait that looks very
   different in colour or costume may still be the same brawler — match on body shape and
   weapon first, colour second.
-
+  
 Return ONLY valid JSON in this exact format, no markdown, no explanation:
 {
+  "game_mode": "<mode name in ALL CAPS, e.g. GEM GRAB>",
   "enemy_team":[
     {"player_name": "<name>", "brawler": "<brawler name>"}
   ],
@@ -73,11 +81,13 @@ api_key = os.environ.get("GEMINI_API_KEY")
 
 # ── OpenCV Frame Heuristics (Import these into your live loop) ──────────────
 
-def is_loading_screen(frame: np.ndarray, threshold: float = 0.05) -> bool:
+def is_loading_screen(frame: np.ndarray, threshold: float = 0.04) -> bool:
     """
     Fast OpenCV heuristic to detect the Brawl Stars loading screen.
-    Checks if the top 1/3 is highly orange/red and the bottom 1/3 is highly blue.
+    Checks for orange/red top third, blue bottom third, and a dark center divider.
     """
+    # Crop PigeonCast title bar (~35px at 360p)
+    frame = frame[35:, :]
     h = frame.shape[0]
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -92,36 +102,69 @@ def is_loading_screen(frame: np.ndarray, threshold: float = 0.05) -> bool:
 
     top_ratio = np.count_nonzero(orange_mask) / orange_mask.size
     bottom_ratio = np.count_nonzero(blue_mask) / blue_mask.size
-    
+
+    # Both bands must individually have substantial color coverage
+    if top_ratio < 0.10 or bottom_ratio < 0.10:
+        return False
+
+    # Check for the dark "VS" divider band in the center of the frame
+    mid_strip = hsv[int(h * 0.42): int(h * 0.58), :]
+    dark_mask = cv2.inRange(mid_strip, np.array([0, 0, 0]), np.array([180, 255, 60]))
+    if np.count_nonzero(dark_mask) / dark_mask.size < 0.25:
+        return False
+
     return (top_ratio * bottom_ratio) > threshold
 
 
 # ── Reference Image Loader ───────────────────────────────────────────────────
 
-def load_reference_images(ref_dir: str, size: int = 256) -> list[tuple[PIL.Image.Image, str]]:
-    """Load and resize all brawler reference images from a directory.
+def load_reference_images(ref_dir: str, thumb: int = 64, cols: int = 11) -> PIL.Image.Image:
+    """Build a single contact-sheet grid of all brawler references.
 
-    Each file's stem (filename without extension) is used as the brawler name.
-    Images are scaled to fit within a size x size box (preserving aspect ratio)
-    and composited onto a white background to handle transparency.
+    Each cell is a thumbnail with the brawler name printed below it.
+    Returns one PIL Image instead of 101 separate images — dramatically
+    reduces the Gemini API payload and latency.
     """
+    from PIL import ImageDraw, ImageFont
+
     ref_path = Path(ref_dir)
-    refs =[]
+    entries = []
     for img_path in sorted(ref_path.glob("*.[pjP][npN][gG]*")):
         brawler_name = img_path.stem
         img = PIL.Image.open(img_path).convert("RGBA")
-        img.thumbnail((size, size), PIL.Image.LANCZOS)
-        canvas = PIL.Image.new("RGB", (size, size), (255, 255, 255))
-        paste_x = (size - img.width) // 2
-        paste_y = (size - img.height) // 2
-        canvas.paste(img, (paste_x, paste_y), mask=img)
-        refs.append((canvas, brawler_name))
-    return refs
+        img.thumbnail((thumb, thumb), PIL.Image.LANCZOS)
+        canvas = PIL.Image.new("RGB", (thumb, thumb), (255, 255, 255))
+        px = (thumb - img.width) // 2
+        py = (thumb - img.height) // 2
+        canvas.paste(img, (px, py), mask=img)
+        entries.append((canvas, brawler_name))
+
+    if not entries:
+        return None
+
+    label_h = 14
+    cell_w, cell_h = thumb, thumb + label_h
+    rows = (len(entries) + cols - 1) // cols
+    sheet = PIL.Image.new("RGB", (cols * cell_w, rows * cell_h), (255, 255, 255))
+    draw = ImageDraw.Draw(sheet)
+
+    try:
+        font = ImageFont.truetype("arial.ttf", 10)
+    except OSError:
+        font = ImageFont.load_default()
+
+    for i, (img, name) in enumerate(entries):
+        r, c = divmod(i, cols)
+        x, y = c * cell_w, r * cell_h
+        sheet.paste(img, (x, y))
+        draw.text((x + 2, y + thumb), name, fill=(0, 0, 0), font=font)
+
+    return sheet
 
 
 # ── Gemini Classification ─────────────────────────────────────────────────────
 
-def classify_loading_screen(image_path: str, refs: list | None = None) -> dict:
+def classify_loading_screen(image_path: str, refs: PIL.Image.Image | None = None) -> dict:
     if not api_key:
         raise EnvironmentError("GEMINI_API_KEY environment variable is not set.")
 
@@ -130,13 +173,13 @@ def classify_loading_screen(image_path: str, refs: list | None = None) -> dict:
     image = PIL.Image.open(image_path).convert("RGB")
 
     if refs:
-        contents: list =["Reference images — each labelled with the brawler name:\n"]
-        for ref_img, brawler_name in refs:
-            contents.append(ref_img)
-            contents.append(f"{brawler_name}\n")
-        contents.append("\nNow classify this loading screen:\n")
-        contents.append(image)
-        contents.append(PROMPT)
+        contents = [
+            "Reference grid — each cell shows a brawler with its name below:\n",
+            refs,
+            "\nNow classify this loading screen:\n",
+            image,
+            PROMPT,
+        ]
     else:
         contents = [image, PROMPT]
 
@@ -160,6 +203,9 @@ def classify_loading_screen(image_path: str, refs: list | None = None) -> dict:
 
 def print_classification(result: dict) -> None:
     print("\n=== BRAWL STARS LOADING SCREEN CLASSIFICATION ===\n")
+
+    mode = result.get("game_mode", "UNKNOWN")
+    print(f"  Game Mode: {mode}\n")
 
     for team_key, label in[("enemy_team", "Enemy Team"), ("my_team", "My Team")]:
         players = result.get(team_key,[])
@@ -187,7 +233,7 @@ if __name__ == "__main__":
     refs = None
     if Path(REFERENCE_DIR).is_dir():
         refs = load_reference_images(REFERENCE_DIR)
-        print(f"Loaded {len(refs)} brawler reference images.")
+        print(f"Loaded brawler reference grid ({refs.size[0]}x{refs.size[1]})." if refs else "No references found.")
     else:
         print(f"Warning: '{REFERENCE_DIR}/' not found — running without references.")
 

@@ -1,0 +1,31 @@
+{
+  "game_mode": "GEM GRAB",
+  "enemy_team": [
+    {
+      "player_name": "Bot 3",
+      "brawler": "Buster"
+    },
+    {
+      "player_name": "Bot 2",
+      "brawler": "Lola"
+    },
+    {
+      "player_name": "Bot 1",
+      "brawler": "Rico"
+    }
+  ],
+  "my_team": [
+    {
+      "player_name": "Bot 5",
+      "brawler": "Rosa"
+    },
+    {
+      "player_name": "Bot 4",
+      "brawler": "Eve"
+    },
+    {
+      "player_name": "pid-stu",
+      "brawler": "Bull"
+    }
+  ]
+}

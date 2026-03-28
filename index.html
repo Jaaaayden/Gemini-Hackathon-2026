@@ -4,8 +4,8 @@
     <title>Brawl Stars AI Coach</title>
 </head>
 <body>
-    <h1>AI Coach Pipeline</h1>
-    <button id="startBtn">1. Share Pigeoncast Window</button>
+    <h1>winners project pov</h1>
+    <button id="startBtn">1. Share Pigeoncast Window (any broadcasting)</button>
     <br><br>
     <!-- Hidden video element just to capture the stream -->
     <video id="video" autoplay style="max-width: 600px; border: 1px solid black;"></video>
@@ -33,35 +33,35 @@
                 setInterval(sendFrameToBackend, 500); 
             };
 
-            // 3. Play the audio chunks that Python sends back from Gemini
+            // 3. Handle both audio (binary) and text (JSON) from server
             ws.onmessage = async (event) => {
                 if (event.data instanceof ArrayBuffer) {
                     playAudioChunk(event.data);
+                } else if (typeof event.data === 'string') {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'coach') {
+                        speakCoaching(msg.text);
+                    }
                 }
             };
         };
 
         function sendFrameToBackend() {
             if (ws.readyState !== WebSocket.OPEN) return;
-            
-            // Draw the current video frame to a temporary canvas
             const canvas = document.createElement('canvas');
-            canvas.width = 640; // Downscale to save bandwidth
+            canvas.width = 640;
             canvas.height = 360;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Convert to base64 JPEG and send to Python
             const base64Image = canvas.toDataURL('image/jpeg', 0.8);
             ws.send(base64Image);
         }
 
         function playAudioChunk(arrayBuffer) {
-            // Gemini returns raw 16-bit PCM audio. We convert it to Float32 for the Web Audio API
             const int16Array = new Int16Array(arrayBuffer);
             const float32Array = new Float32Array(int16Array.length);
             for (let i = 0; i < int16Array.length; i++) {
-                float32Array[i] = int16Array[i] / 32768.0; 
+                float32Array[i] = int16Array[i] / 32768.0;
             }
             const buffer = audioCtx.createBuffer(1, float32Array.length, 24000);
             buffer.copyToChannel(float32Array, 0);
@@ -69,6 +69,18 @@
             source.buffer = buffer;
             source.connect(audioCtx.destination);
             source.start();
+        }
+
+        // Use browser Text-to-Speech for coaching callouts
+        const synth = window.speechSynthesis;
+        function speakCoaching(text) {
+            // Cancel any ongoing speech so new callouts take priority
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.3;  // Slightly fast for urgency
+            utterance.pitch = 1.0;
+            synth.speak(utterance);
+            console.log("Coach:", text);
         }
     </script>
 </body>
