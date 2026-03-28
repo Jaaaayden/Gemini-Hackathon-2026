@@ -54,13 +54,18 @@ Handling skins:
   different in colour or costume may still be the same brawler — match on body shape and
   weapon first, colour second.
 
+For each portrait card, before naming the brawler fill in a "reasoning" field that notes:
+- Weapon type (e.g. shotgun, sniper rifle, thrown projectile, melee, none)
+- Body proportions (e.g. large/stocky, slim, small/round)
+- Whether a companion or second character is present and what it looks like
+
 Return ONLY valid JSON in this exact format, no markdown, no explanation:
 {
   "enemy_team":[
-    {"player_name": "<name>", "brawler": "<brawler name>"}
+    {"player_name": "<name>", "reasoning": "<weapon · body · companion>", "brawler": "<brawler name>"}
   ],
   "my_team":[
-    {"player_name": "<name>", "brawler": "<brawler name>"}
+    {"player_name": "<name>", "reasoning": "<weapon · body · companion>", "brawler": "<brawler name>"}
   ]
 }
 """
