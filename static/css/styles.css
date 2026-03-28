@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg-primary: #0f0f1a;
+    --bg-gradient: radial-gradient(ellipse at top, #1a1a3e 0%, #0f0f1a 70%);
+    --bg-card: rgba(22, 33, 62, 0.6);
+    --bg-card-hover: rgba(26, 39, 68, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --accent-red: #e94560;
+    --accent-blue: #0f3460;
+    --accent-green: #4ade80;
+    --accent-yellow: #fbbf24;
+    --accent-enemy: #f87171;
+    --text-primary: #f0f0f0;
+    --text-secondary: rgba(255, 255, 255, 0.6);
+    --border-glow: rgba(233, 69, 96, 0.3);
+    --nav-height: 64px;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-primary);
+    background-image: var(--bg-gradient);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Nav ── */
+nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--nav-height);
+    padding: 0 32px;
+    background: rgba(15, 15, 26, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+nav .logo {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent-red);
+    text-decoration: none;
+    letter-spacing: -0.02em;
+}
+
+nav .nav-links {
+    display: flex;
+    gap: 8px;
+}
+
+nav .nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+nav .nav-links a:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+nav .nav-links a.active {
+    color: var(--text-primary);
+    background: rgba(233, 69, 96, 0.15);
+}
+
+/* ── Buttons ── */
+button {
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* ── Glass Card ── */
+.glass-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    nav {
+        padding: 0 16px;
+    }
+
+    nav .logo {
+        font-size: 16px;
+    }
+}

@@ -8,6 +8,7 @@ import numpy as np
 import websockets
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,6 +16,7 @@ load_dotenv()
 from classify_loading_screen import is_loading_screen, classify_loading_screen, load_reference_images, REFERENCE_DIR
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 LIVE_MODEL = "gemini-3.1-flash-live-preview"
@@ -35,6 +37,10 @@ with open("mode_meta.json") as f:
 @app.get("/")
 async def index():
     return FileResponse("index.html")
+
+@app.get("/about")
+async def about():
+    return FileResponse("about.html")
 
 def build_system_instruction(roster: dict, mode: str) -> str:
     my_team = roster.get("my_team", [])

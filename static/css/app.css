@@ -1,0 +1,182 @@
+/* ── App Layout ── */
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+}
+
+/* ── Controls ── */
+#controls {
+    margin-bottom: 24px;
+    display: flex;
+    gap: 10px;
+}
+
+#startBtn {
+    background: var(--accent-red);
+    color: white;
+    box-shadow: 0 4px 16px rgba(233, 69, 96, 0.3);
+}
+
+#startBtn:hover {
+    box-shadow: 0 6px 24px rgba(233, 69, 96, 0.45);
+}
+
+#nextGameBtn {
+    background: var(--accent-blue);
+    color: white;
+    display: none;
+    box-shadow: 0 4px 16px rgba(15, 52, 96, 0.3);
+}
+
+#nextGameBtn:hover {
+    box-shadow: 0 6px 24px rgba(15, 52, 96, 0.45);
+}
+
+/* ── Main 2-column layout ── */
+#main {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+/* ── Video ── */
+#videoWrap {
+    flex-shrink: 0;
+    background: var(--bg-card);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+video {
+    max-width: 600px;
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+}
+
+/* ── Info Panel ── */
+#infoPanel {
+    min-width: 280px;
+    flex: 1;
+}
+
+/* ── Status ── */
+#status {
+    color: var(--accent-red);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-red);
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(233, 69, 96, 0.6); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(233, 69, 96, 0); }
+}
+
+/* ── Mode Info ── */
+#modeInfo {
+    background: var(--bg-card);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid var(--accent-yellow);
+    padding: 14px 16px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+#modeInfo h3 {
+    margin: 0;
+    color: var(--accent-yellow);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* ── Team Sections ── */
+.team-section {
+    margin-bottom: 16px;
+}
+
+.team-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.team-section.ally h3 { color: var(--accent-green); }
+.team-section.enemy h3 { color: var(--accent-enemy); }
+
+/* ── Brawler Cards ── */
+.brawler-card {
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    transition: background 0.15s ease;
+}
+
+.brawler-card:hover {
+    background: var(--bg-card-hover);
+}
+
+.team-section.ally .brawler-card {
+    border-left: 3px solid var(--accent-green);
+}
+
+.team-section.enemy .brawler-card {
+    border-left: 3px solid var(--accent-enemy);
+}
+
+.brawler-name {
+    font-weight: 600;
+}
+
+.brawler-role {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    main {
+        padding: 20px 16px;
+    }
+
+    #main {
+        flex-direction: column;
+    }
+
+    #videoWrap {
+        width: 100%;
+    }
+
+    video {
+        max-width: 100%;
+    }
+
+    #infoPanel {
+        min-width: auto;
+        width: 100%;
+    }
+}

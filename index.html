@@ -1,172 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Brawl Stars AI Coach</title>
-    <style>
-        body { font-family: sans-serif; margin: 20px; background: #1a1a2e; color: #eee; }
-        h1 { color: #e94560; }
-        #controls { margin-bottom: 16px; }
-        button { padding: 10px 20px; font-size: 14px; border: none; border-radius: 6px; cursor: pointer; margin-right: 8px; }
-        #startBtn { background: #e94560; color: white; }
-        #nextGameBtn { background: #0f3460; color: white; display: none; }
-        #main { display: flex; gap: 24px; }
-        #videoWrap { flex-shrink: 0; }
-        video { max-width: 600px; border: 2px solid #0f3460; border-radius: 8px; }
-        #infoPanel { min-width: 280px; }
-        #status { color: #e94560; font-weight: bold; margin-bottom: 12px; }
-        .team-section { margin-bottom: 16px; }
-        .team-section h3 { margin: 0 0 6px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        .team-section.ally h3 { color: #4ade80; }
-        .team-section.enemy h3 { color: #f87171; }
-        .brawler-card { background: #16213e; padding: 8px 12px; border-radius: 6px; margin-bottom: 4px; font-size: 13px; }
-        .brawler-name { font-weight: bold; }
-        .brawler-role { opacity: 0.7; font-size: 12px; }
-        #modeInfo { background: #16213e; padding: 12px; border-radius: 6px; margin-bottom: 16px; }
-        #modeInfo h3 { margin: 0 0 4px 0; color: #fbbf24; font-size: 14px; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrawlIQ</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-    <h1>Brawl Stars AI Coach</h1>
-    <div id="controls">
-        <button id="startBtn">Share Screen</button>
-        <button id="nextGameBtn">Next Game</button>
-    </div>
-    <div id="main">
-        <div id="videoWrap">
-            <video id="video" autoplay></video>
+    <nav>
+        <a href="/" class="logo">BrawlIQ</a>
+        <div class="nav-links">
+            <a href="/" class="active">Coach</a>
+            <a href="/about">About</a>
         </div>
-        <div id="infoPanel">
-            <div id="status">Waiting to start...</div>
-            <div id="matchDetails"></div>
+    </nav>
+
+    <main>
+        <div id="controls">
+            <button id="startBtn">Share Screen</button>
+            <button id="nextGameBtn">Next Game</button>
         </div>
-    </div>
+        <div id="main">
+            <div id="videoWrap">
+                <video id="video" autoplay></video>
+            </div>
+            <div id="infoPanel">
+                <div id="status">Waiting to start...</div>
+                <div id="matchDetails"></div>
+            </div>
+        </div>
+    </main>
 
-    <script>
-        const video = document.getElementById('video');
-        const startBtn = document.getElementById('startBtn');
-        const nextGameBtn = document.getElementById('nextGameBtn');
-        const statusEl = document.getElementById('status');
-        const matchDetails = document.getElementById('matchDetails');
-        let ws;
-        let frameInterval;
-        let stream;
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-
-        startBtn.onclick = async () => {
-            stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            video.srcObject = stream;
-            startBtn.style.display = 'none';
-            connectAndListen();
-        };
-
-        nextGameBtn.onclick = () => {
-            // Close current connection and reconnect for next game
-            if (frameInterval) clearInterval(frameInterval);
-            if (ws && ws.readyState === WebSocket.OPEN) ws.close();
-            nextPlayTime = 0;
-            matchDetails.innerHTML = '';
-            nextGameBtn.style.display = 'none';
-            connectAndListen();
-        };
-
-        function connectAndListen() {
-            statusEl.textContent = 'Scanning for loading screen...';
-            audioCtx.resume();
-
-            ws = new WebSocket("ws://localhost:8000/ws");
-            ws.binaryType = "arraybuffer";
-
-            ws.onopen = () => {
-                console.log("Connected to backend.");
-                frameInterval = setInterval(sendFrameToBackend, 500);
-            };
-
-            ws.onmessage = async (event) => {
-                if (event.data instanceof ArrayBuffer) {
-                    playAudioChunk(event.data);
-                } else if (typeof event.data === 'string') {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type === 'match_info') {
-                        showMatchInfo(msg);
-                    } else if (msg.type === 'coach') {
-                        speakCoaching(msg.text);
-                    }
-                }
-            };
-
-            ws.onclose = () => {
-                console.log("WebSocket closed.");
-                if (frameInterval) clearInterval(frameInterval);
-            };
-        }
-
-        function showMatchInfo(info) {
-            statusEl.textContent = 'Coaching in progress...';
-            nextGameBtn.style.display = 'inline-block';
-
-            let html = '';
-
-            // Mode
-            html += `<div id="modeInfo"><h3>Mode: ${info.mode}</h3></div>`;
-
-            // My team
-            html += '<div class="team-section ally"><h3>My Team</h3>';
-            for (const p of info.my_team) {
-                html += `<div class="brawler-card"><span class="brawler-name">${p.brawler}</span> <span class="brawler-role">${p.player_name || ''}</span></div>`;
-            }
-            html += '</div>';
-
-            // Enemy team
-            html += '<div class="team-section enemy"><h3>Enemy Team</h3>';
-            for (const p of info.enemy_team) {
-                html += `<div class="brawler-card"><span class="brawler-name">${p.brawler}</span> <span class="brawler-role">${p.player_name || ''}</span></div>`;
-            }
-            html += '</div>';
-
-            matchDetails.innerHTML = html;
-        }
-
-        function sendFrameToBackend() {
-            if (!ws || ws.readyState !== WebSocket.OPEN) return;
-            const canvas = document.createElement('canvas');
-            canvas.width = 640;
-            canvas.height = 360;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-            ws.send(base64Image);
-        }
-
-        let nextPlayTime = 0;
-
-        function playAudioChunk(arrayBuffer) {
-            const int16Array = new Int16Array(arrayBuffer);
-            const float32Array = new Float32Array(int16Array.length);
-            for (let i = 0; i < int16Array.length; i++) {
-                float32Array[i] = int16Array[i] / 32768.0;
-            }
-            const buffer = audioCtx.createBuffer(1, float32Array.length, 24000);
-            buffer.copyToChannel(float32Array, 0);
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtx.destination);
-
-            const now = audioCtx.currentTime;
-            const startTime = Math.max(now, nextPlayTime);
-            source.start(startTime);
-            nextPlayTime = startTime + buffer.duration;
-        }
-
-        const synth = window.speechSynthesis;
-        function speakCoaching(text) {
-            synth.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 1.3;
-            utterance.pitch = 1.0;
-            synth.speak(utterance);
-            console.log("Coach:", text);
-        }
-    </script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

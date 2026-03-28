@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Brawl Stars AI Coach</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/about.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">Brawl Stars AI Coach</a>
+        <div class="nav-links">
+            <a href="/">Coach</a>
+            <a href="/about" class="active">About</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>Brawl Stars AI Coach</h1>
+        <p>Real-time AI coaching powered by Gemini. Get live voice callouts, threat analysis, and strategic advice while you play.</p>
+    </section>
+
+    <div class="about-content">
+        <section class="about-section">
+            <h2>Why This Exists</h2>
+            <div class="motivation-card">
+                <p>Chess.com recently expanded their AI team and hired GM Vinay Bhat as a director to develop a coach that "knows what you've been doing, what are some of your strengths, weaknesses, patterns. It knows how to encourage you, sort of lean into positive reinforcement." Their vision: AI that continuously opens up a complex game to more and more players.</p>
+                <p>Brawl Stars has 10M+ active players and has gotten significantly more complex over 6+ years. Yet there are very few free resources to help players improve. This project applies that same AI coaching philosophy to a fast-paced mobile game -- giving every player access to a real-time coach that understands matchups, threats, and mode-specific strategy.</p>
+            </div>
+        </section>
+
+        <section class="about-section">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <h3>Screen Capture</h3>
+                    <p>Share your game screen through the browser. Frames are captured at 2fps and streamed to the server via WebSocket for real-time analysis.</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <h3>Loading Screen Detection</h3>
+                    <p>OpenCV analyzes each frame using color histogram heuristics -- detecting the distinctive blue (ally) and red (enemy) panels of the pre-match loading screen.</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <h3>Roster & Mode Classification</h3>
+                    <p>Gemini's vision model identifies all 6 brawlers and the game mode from the loading screen. Each brawler's role, threat level, and weaknesses are loaded from a curated database.</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <h3>Live Voice Coaching</h3>
+                    <p>Gemini 3.1 Flash Live receives game frames alongside a full context prompt with team compositions and mode strategy. It streams back real-time audio coaching callouts -- short, punchy advice focused on threats and the win condition.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="about-section">
+            <h2>Tech Stack</h2>
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h3>Gemini 3.1 Flash Live</h3>
+                    <p>Multimodal real-time AI for live video analysis and audio response generation over a persistent WebSocket connection.</p>
+                </div>
+                <div class="tech-card">
+                    <h3>FastAPI + WebSocket</h3>
+                    <p>Low-latency bidirectional communication between browser and AI pipeline, handling frame ingestion and audio forwarding.</p>
+                </div>
+                <div class="tech-card">
+                    <h3>OpenCV</h3>
+                    <p>Computer vision for loading screen detection using HSV color space analysis and region-based heuristics.</p>
+                </div>
+                <div class="tech-card">
+                    <h3>Web Audio API</h3>
+                    <p>Client-side PCM audio playback at 24kHz with buffered scheduling for seamless, gapless voice coaching.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="about-section">
+            <h2>Capabilities</h2>
+            <div class="capabilities-list">
+                <div class="capability"><strong>80+ brawlers</strong> recognized with role, threat level, and counter-strategy data</div>
+                <div class="capability"><strong>4 game modes</strong> supported -- Gem Grab, Brawl Ball, Knockout, and Heist</div>
+                <div class="capability"><strong>Real-time threat assessment</strong> based on enemy team composition and proximity</div>
+                <div class="capability"><strong>Mode-specific strategy</strong> with coaching focused on win conditions and objectives</div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        Built for the Google Gemini API Developer Competition 2025
+    </footer>
+</body>
+</html>
